@@ -1,0 +1,56 @@
+name: ucbai_gdsc
+channels:
+  - conda-forge
+  - nvidia
+  - pytorch
+dependencies:
+  - python=3.11
+  - kagglehub
+  - ipywidgets
+  - numpy
+  - pytables
+  - pandas
+  - lightgbm
+  - polars
+  - pyarrow
+  - scanpy                # single-cell style EDA helpers
+  - anndata
+  - scikit-learn
+  - category_encoders
+  - matplotlib
+  - matplotlib-inline
+  - seaborn
+  - plotly
+  - pytest
+  - black
+  - isort
+  - flake8
+  - mypy
+  - shap
+  - xgboost
+  - optuna
+  - tabulate
+  - jupyterlab
+  - ipykernel
+  - openpyxl            # read .xlsx (GDSC drug screen files)
+  - python-wget
+  - fastparquet         # for writing/reading parquet 
+  # ── GPU & deep-learning ───────────────────────
+  - pytorch=2.3.*       # pulls CUDA 12-compatible build
+  - torchvision
+  - torchaudio
+  - pytorch-cuda=12.1   # ensure toolkit matches GPU driver
+  # ── install-via-pip extras ────────────────────
+  - pip
+  - pip:
+      - pytorch-tabnet    # tabular DL
+      - nbformat
+      - torch-geometric   # DeepCDR & GNNs
+      - wandb             # experiment tracking
+      - networkx          # drug-graph handling
+      - scanpy            # single-cell style EDA helpers
+      - openpyxl          # excel data
+      - GEOparse          # parse GES (GEO) file for methylation data
+      - kaleido           # for saving plotly figures
+
+
