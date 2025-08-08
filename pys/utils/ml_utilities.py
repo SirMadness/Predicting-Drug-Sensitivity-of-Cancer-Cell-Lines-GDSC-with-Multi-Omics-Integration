@@ -563,9 +563,101 @@ def get_model_evaluation_metrics(y_true, y_pred, sample_weights=None, print_resu
     return {"RMSE": rmse, "MAE": mae, "R2": r2, "Pearson": pearson, "Spearman": spearman}
 
 
+# function for turning regression predictions into binary predictions
+def convert_reg_pred_to_binary(df, y_pred, threshholds):
+#   • regression ⇒ class  (hard)
+    df["binary_reg_pred"] = (
+        y_pred < df["drug_id"].map(threshholds)
+    ).astype(int)
+
+    return df["binary_reg_pred"]
+
+# Add classification metrics to regression model
+def add_binary_metrics(
+    df_models_results: pd.DataFrame, # dataframe with model results
+    model_name: str,  # model name to match in df_models_results
+    split_name: str, # split name to match in df_models_results
+    df: pd.DataFrame, # dataframe with predictions,
+    y_true: pd.Series,
+    y_pred: pd.Series,
+    #y_score: pd.Series = None,
+    threshold_per_drug=None,  # dict with drug_id as key and threshold as value
+    pos_label=None,
+    round_to: int = 3,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    1) Creates a binary prediction column in `df` using
+       convert_reg_pred_to_binary(...) and `threshold_per_drug`.
+    2) Computes classification metrics (accuracy, PR-AUC, precision, recall, fbeta)
+       and writes them into the single row of `df_models` matching
+       (Model == model_name) & (Dataset == split_name).
+    3) Returns (df_models, df) with updates applied.
+    """
+
+    # — 1) Make the binary labels in df —
+    bin_col = f"{model_name}_y_pred_bin"
+    df[bin_col] = convert_reg_pred_to_binary(
+        df,
+        y_pred,
+        threshold_per_drug
+    )
+    y_pred_bin = df[bin_col]
+
+    # — 2) Locate the row in df_models to update —
+    mask = (
+        (df_models_results['Model'] == model_name) &
+        (df_models_results['Split'] == split_name)
+    )
+    if not mask.any():
+        raise ValueError(f"No row for model={model_name}, dataset={split_name}")
+
+    # — 3) Compute metrics —
+    acc = accuracy_score(y_true, y_pred_bin)
+    # pr_auc = (
+    #     average_precision_score(y_true, y_score)
+    #     if y_score is not None else np.nan
+    # )
+    prec = precision_score(
+        y_true, y_pred_bin,
+        pos_label=pos_label,
+        zero_division=0
+    )
+    rec = recall_score(
+        y_true, y_pred_bin,
+        pos_label=pos_label,
+        zero_division=0
+    )
+    f1  = fbeta_score(
+        y_true, y_pred_bin,
+        pos_label=pos_label,
+        beta=1,
+        zero_division=0
+    )
+
+    # — 4) Round & assign back via .loc (no chained indexing) —
+    metrics = {
+        'Accuracy':  round(acc, round_to),
+        # 'pr_auc':    round(pr_auc, round_to) if not np.isnan(pr_auc) else np.nan,
+        'Precision': round(prec, round_to),
+        'Recall':    round(rec, round_to),
+        'FBeta':     round(f1, round_to),
+    }
+
+    # first, pull out the single integer index of the row to update
+    idx = df_models_results.index[mask][0]
+
+    # now assign only into columns that already exist
+    for col, val in metrics.items():
+        if col not in df_models_results.columns:
+            raise KeyError(f"Column `{col}` not found in df_models_results; did you mean a different name?")
+        df_models_results.at[idx, col] = val
+
+    return df_models_results, df
+
+
 ## BAR valuate_model was updated after 16.1.valuate_model_new
 def evaluate_model(model=None, model_name=None, data_split=None, X=None, y=None, sample_weights=None, df_models_eval=None,
-                    train_time=None, pos_label=None, round_to=ROUND_TO, plot_pr_auc=False):
+                    train_time=None, pos_label=None, round_to=ROUND_TO, threshhold_per_drug=None, plot_pr_auc=False):
     """
     Evaluates a classification model and returns a dictionary of metrics.
 
@@ -633,13 +725,12 @@ def evaluate_model(model=None, model_name=None, data_split=None, X=None, y=None,
             'Recall':     np.nan, #round(recall, ROUND_TO),
             'FBeta':      np.nan, #round(fbeta, ROUND_TO),
             'PR_AUC':     np.nan, #round(pr_auc, ROUND_TO),
-            "RMSE":     reggres_metrics["RMSE"], 
-            "MAE":      reggres_metrics["MAE"], 
-            "R2":       reggres_metrics["R2"], 
-            "Pearson":  reggres_metrics["Pearson"], 
-            "Spearman": reggres_metrics["Spearman"]
+            "RMSE":     round(reggres_metrics["RMSE"], round_to), 
+            "MAE":      round(reggres_metrics["MAE"], round_to), 
+            "R2":       round(reggres_metrics["R2"], round_to), 
+            "Pearson":  round(reggres_metrics["Pearson"], round_to), 
+            "Spearman": round(reggres_metrics["Spearman"], round_to)
         }
-       
 
     else:
         ## PROCESS OTHER MODEL TYPE
@@ -696,11 +787,11 @@ def evaluate_model(model=None, model_name=None, data_split=None, X=None, y=None,
             'Recall':     round(recall, round_to),
             'FBeta':      round(fbeta, round_to),
             'PR_AUC':     round(pr_auc, round_to),
-            "RMSE":     reggres_metrics["RMSE"], 
-            "MAE":      reggres_metrics["MAE"], 
-            "R2":       reggres_metrics["R2"], 
-            "Pearson":  reggres_metrics["Pearson"], 
-            "Spearman": reggres_metrics["Spearman"]
+            "RMSE":     round(reggres_metrics["RMSE"], round_to), 
+            "MAE":      round(reggres_metrics["MAE"], round_to), 
+            "R2":       round(reggres_metrics["R2"], round_to), 
+            "Pearson":  round(reggres_metrics["Pearson"], round_to), 
+            "Spearman": round(reggres_metrics["Spearman"], round_to)
         }
 
  
@@ -728,6 +819,20 @@ def evaluate_model(model=None, model_name=None, data_split=None, X=None, y=None,
     # else:
     #     print('else')
     #     df_models_eval.loc[condition, :] = pd.DataFrame([row]).values
+
+    ## ADD classfication metrics for regression models
+    # if threshhold_per_drug is not None and model_type == 'regression':
+    #     df_models_eval, X = add_binary_metrics(
+    #         df_models_results=df_models_eval,
+    #         model_name=model_name,
+    #         split_name='Train',
+    #         df=X,
+    #         y_true=y,
+    #         y_pred=y_pred,  #X[f"{model_name}_y_pred"], # THIS IS NOT ADDED TO X
+    #         threshold_per_drug=threshhold_per_drug,
+    #         pos_label=1,
+    #         round_to=ROUND_TO
+    #     )
 
     return df_models_eval
 
@@ -758,7 +863,7 @@ def get_model_condition(model_name=None, data_split=None, df_models_eval=None):
 # Mean, median, std of r2 per feature
 # build a table of r2 by drug, cosmic_id, cell info and drug info
 def plot_r2_by_feature(df, y_test, y_pred, floor=None, model_name=None):
-    features = [ 'drug_id', 'target', 'target_pathway', 'cancer_type', 'tissue_desc_1',
+    features = [ 'drug_id', 'target', 'pathway', 'cancer_type', 'tissue_desc_1',
             'tissue_desc_2','growth_properties']
     r2_mean_dict = {key: [] for key in features}
     r2_median_dict = {key: [] for key in features}
@@ -778,16 +883,19 @@ def plot_r2_by_feature(df, y_test, y_pred, floor=None, model_name=None):
         #r2_median_dict[feature] = np.median(np.array(r2_list))
 
     # Plot histogram
-    plt.figure(figsize=(8, 5))
+    fig, ax = plt.subplots(figsize=(8, 5))
     sns.boxplot(r2_mean_dict)
 
-    plt.ylabel("Drug or cell feature")
-    plt.ylabel("Mean R² (per feature)")
+    ax.set_ylabel("Mean R² (per feature)")
     if floor is not None:
-        plt.ylim([floor, 1])
-    plt.xticks(rotation=45)
-    plt.title(f"{model_name}: Mean R² values by drug or cell information (Validation Set)")
-    plt.show()
+        ax.set_ylim(floor, 1)
+    ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha="right")
+    ax.set_title(
+        f"{model_name}:\n"
+        "Mean R² values by drug or cell information (Validation Set)"
+    )
+    ax.set_ylabel("Mean R² (per feature)")
+    return fig
     
 def plot_scatter_relationship(x, y, xlabel="Actual LN_IC50", ylabel="Predicted LN_IC50",title=None):
     plt.figure(figsize=(6, 6))

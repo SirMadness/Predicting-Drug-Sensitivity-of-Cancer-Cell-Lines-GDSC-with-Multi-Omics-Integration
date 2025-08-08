@@ -1,56 +1,66 @@
-name: ucbai_gdsc
+name: ucbai_gdsc_2
 channels:
   - conda-forge
   - nvidia
   - pytorch
+  - defaults
+
 dependencies:
   - python=3.11
-  - kagglehub
-  - ipywidgets
+  - pip
+
+  # — Core libraries (all platforms) —
   - numpy
-  - pytables
   - pandas
-  - lightgbm
-  - polars
-  - pyarrow
-  - scanpy                # single-cell style EDA helpers
-  - anndata
   - scikit-learn
-  - category_encoders
+  - xgboost
+  - lightgbm
   - matplotlib
-  - matplotlib-inline
   - seaborn
   - plotly
+  - shap
+  - scanpy
+  - anndata
+
+  # — Excel & I/O —
+  - openpyxl
+  - python-wget
+  - pyarrow
+  - fastparquet
+
+  # — Testing & formatting —
   - pytest
   - black
   - isort
   - flake8
   - mypy
-  - shap
-  - xgboost
-  - optuna
-  - tabulate
-  - jupyterlab
-  - ipykernel
-  - openpyxl            # read .xlsx (GDSC drug screen files)
-  - python-wget
-  - fastparquet         # for writing/reading parquet 
-  # ── GPU & deep-learning ───────────────────────
-  - pytorch=2.3.*       # pulls CUDA 12-compatible build
-  - torchvision
-  - torchaudio
-  - pytorch-cuda=12.1   # ensure toolkit matches GPU driver
-  # ── install-via-pip extras ────────────────────
-  - pip
+
+  # — PyPI-only extras via pip —
   - pip:
-      - pytorch-tabnet    # tabular DL
-      - nbformat
-      - torch-geometric   # DeepCDR & GNNs
-      - wandb             # experiment tracking
-      - networkx          # drug-graph handling
-      - scanpy            # single-cell style EDA helpers
-      - openpyxl          # excel data
-      - GEOparse          # parse GES (GEO) file for methylation data
-      - kaleido           # for saving plotly figures
+    - optuna
+    - category_encoders
+    - imbalanced-learn
+    - tabulate
+    - wandb
+    - pytorch-tabnet
+    - torch-geometric
+    - networkx
+    - GEOparse
+    - nbformat
+    - kaleido
+    - graphviz
 
+  # — GPU & deep-learning —  
+  # only install cudatoolkit + RAPIDS + PyTorch, etc. on Linux  
+  - cudatoolkit=12.1    # [linux]  
+  - cupy                # [linux]  
+  - cudf=24.06          # [linux]  
+  - cuml=24.06          # [linux]  
+  - pytorch=2.3.*       # [linux]  
+  - torchvision         # [linux]  
+  - torchaudio          # [linux]  
+  - tensorflow          # [linux]  
 
+  # on macOS, install the Apple-optimized TensorFlow & Metal plugin  
+  - tensorflow-macos    # [osx]  
+  - tensorflow-metal    # [osx]  
