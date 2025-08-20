@@ -1,4 +1,4 @@
-# Predicting Drug Sensitivity of Cancer Cell Lines (GDSC) with Multi-Omics Integration into Genomics of Drug Sensitivity in Cancer II data set.
+# Predicting Drug Sensitivity of Cancer Cell Lines with Multi-Omics Integration into Genomics of Drug Sensitivity in Cancer II (GDSC) data set.
 *UC Berkeley AI/ML Professional Certificate — Capstone, Spring 2025*  
 Author  |  Brian Rabkin
 
